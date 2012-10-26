@@ -9,38 +9,39 @@
 /* The following line defines global variables defined elsewhere. */
 /*globals jQuery, portal_url*/
 
-require.config({
-    // paths: {
-    //     "patterns": "Libraries/Patterns"
-    // },
-    // define module dependencies for modules not using define
-    shim: {
-        'Libraries/backbone': {
-            //These script dependencies should be loaded before loading
-            //backbone.js
-            deps: [
-                'Libraries/underscore', 
-                'jquery'],
-            //Once loaded, use the global 'Backbone' as the
-            //module value.
-            exports: 'Backbone'
-        },
-
-        'Libraries/strophe.muc': {
-            deps: ['Libraries/strophe', 'jquery']
-        },
-
-        'Libraries/strophe.roster': {
-            deps: ['Libraries/strophe', 'jquery']
-        }
-    }
-});
-
 // AMD/global registrations
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) { 
+
+        require.config({
+            // paths: {
+            //     "patterns": "Libraries/Patterns"
+            // },
+            // define module dependencies for modules not using define
+            shim: {
+                'Libraries/backbone': {
+                    //These script dependencies should be loaded before loading
+                    //backbone.js
+                    deps: [
+                        'Libraries/underscore', 
+                        'jquery'],
+                    //Once loaded, use the global 'Backbone' as the
+                    //module value.
+                    exports: 'Backbone'
+                },
+
+                'Libraries/strophe.muc': {
+                    deps: ['Libraries/strophe', 'jquery']
+                },
+
+                'Libraries/strophe.roster': {
+                    deps: ['Libraries/strophe', 'jquery']
+                }
+            }
+        });
+
         define([
-            'Libraries/burry.js/burry',
+            "Libraries/burry.js/burry",
             "Libraries/underscore.string",
             "Libraries/sjcl",
             "Libraries/backbone",
@@ -136,7 +137,7 @@ require.config({
         getMessages: function (jid) {
             var bare_jid = Strophe.getBareJidFromJid(jid),
                 decrypted_msgs = [], i;
-            var msgs =store.get(hex_sha1(this.get('own_jid')+bare_jid)) || [];
+            var msgs = store.get(hex_sha1(this.get('own_jid')+bare_jid)) || [];
             for (i=0; i<msgs.length; i++) {
                 decrypted_msgs.push(sjcl.decrypt(hex_sha1(this.get('own_jid')), msgs[i]));
             }
@@ -420,7 +421,7 @@ require.config({
 
         template: _.template(
                     '<div class="chat-head chat-head-chatbox">' +
-                        '<a href="javascript:void(0)" class="chatbox-button close-chatbox-button">X</a>' +
+                        '<a class="close-chatbox-button">X</a>' +
                         '<a href="{{user_profile_url}}" class="user">' +
                             '<img src="{{portrait_url}}" alt="Avatar of {{fullname}}" class="avatar" />' +
                             '<div class="chat-title"> {{ fullname }} </div>' +
@@ -434,6 +435,7 @@ require.config({
                         'class="chat-textarea" ' +
                         'placeholder="Personal message"/>'+
                     '</form>'),
+
 
         render: function () {
             $(this.el).attr('id', this.model.get('box_id'));
@@ -467,11 +469,42 @@ require.config({
     });
 
     xmppchat.ContactsPanel = Backbone.View.extend({
-        el: '#users',
+        tagName: 'div',
+        className: 'oc-chat-content',
+        id: 'users',
         events: {
             'click a.add-xmpp-contact': 'toggleContactForm',
             'submit form.search-xmpp-contact': 'searchContacts',
             'click a.subscribe-to-user': 'subscribeToContact'
+        },
+
+        tab_template: _.template('<li><a class="s current" href="#users">Contacts</a></li>'),
+        template: _.template(
+            '<form class="set-xmpp-status" action="" method="post">'+
+                '<span id="xmpp-status-holder">'+
+                    '<select id="select-xmpp-status">'+
+                        '<option value="online">Online</option>'+
+                        '<option value="busy">Busy</option>'+
+                        '<option value="away">Away</option>'+
+                        '<option value="offline">Offline</option>'+
+                    '</select>'+
+                '</span>'+
+            '</form>'+
+            '<div class="add-xmpp-contact">'+
+                '<a class="add-xmpp-contact" href="#" title="Click to search for new users to add as chat contacts">Add a contact</a>'+
+                '<form class="search-xmpp-contact" style="display:none">'+
+                    '<input type="text" name="identifier" class="username" placeholder="Contact name"/>'+
+                    '<button type="submit">Search</button>'+
+                    '<ul id="found-users"></ul>'+
+                '</form>'+
+            '</div>'+
+            '<dl id="xmppchat-roster"></dl>'
+        ),
+
+        render: function () {
+            $('#controlbox-tabs').append(this.tab_template());
+            $('#controlbox-panes').append(this.$el.html(this.template()));
+            return this;
         },
 
         toggleContactForm: function (ev) {
@@ -514,15 +547,33 @@ require.config({
     });
 
     xmppchat.RoomsPanel = Backbone.View.extend({
-        el: '#chatrooms',
+        tagName: 'div',
+        id: 'chatrooms',
         events: {
             'submit form.add-chatroom': 'createChatRoom',
             'click a.open-room': 'createChatRoom'
         },
         room_template: _.template(
-                            '<dd class="chatroom">' +
-                            '<a class="open-room" room-jid="{{jid}}" title="Click to open this chatroom" href="#">' +
-                            '{{name}}</a></dd>'),
+            '<dd class="available-chatroom">' +
+            '<a class="open-room" room-jid="{{jid}}" title="Click to open this chatroom" href="#">' +
+            '{{name}}</a></dd>'),
+
+        tab_template: _.template('<li><a class="s" href="#chatrooms">Rooms</a></li>'),
+
+        template: _.template(
+            '<form class="add-chatroom" action="" method="post">'+
+                '<input type="text" name="chatroom" class="new-chatroom-name" placeholder="Chat room name"/>'+
+                '<button type="submit">Join</button>'+
+            '</form>'+
+            '<dl id="available-chatrooms">'+
+                '<dt>Available chatrooms</dt>'+
+            '</dl>'),
+
+        render: function () {
+            $('#controlbox-tabs').append(this.tab_template());
+            $('#controlbox-panes').append(this.$el.html(this.template()).hide());
+            return this;
+        },
 
         initialize: function () {
             this.on('update-rooms-list', function (ev) {
@@ -535,7 +586,7 @@ require.config({
             xmppchat.connection.muc.listRooms(xmppchat.connection.muc_domain, $.proxy(function (iq) {
                 var room, name, jid, i, 
                     rooms = $(iq).find('query').find('item');
-                this.$el.find('#available-chatrooms').find('dd.chatroom').remove();
+                this.$el.find('#available-chatrooms').find('dd.available-chatroom').remove();
                 if (rooms.length) {
                     this.$el.find('#available-chatrooms dt').show();
                 } else {
@@ -581,20 +632,49 @@ require.config({
     });
 
     xmppchat.ControlBoxView = xmppchat.ChatBoxView.extend({
-        el: '#controlbox',
+        // XXX: Options for the (still to be done) 'settings' tab:
+        // * Show offline users
+        // * Auto-open chatbox when a message was received.
+        tagName: 'div',
+        className: 'chatbox',
+        id: 'controlbox',
         events: {
-            'click a.close-controlbox-button': 'closeChat'
+            'click a.close-chatbox-button': 'closeChat',
+            'click ul#controlbox-tabs li a': 'switchTab'
         },
 
         initialize: function () {
-            var userspanel; 
-            $('ul.tabs').tabs('div.panes > div');
-            this.contactspanel = new xmppchat.ContactsPanel();
-            this.roomspanel = new xmppchat.RoomsPanel();
-            this.settingspanel = new xmppchat.SettingsPanel();
+            $('body').append($(this.el).hide());
+        },
+
+        template: _.template(
+            '<div class="chat-head oc-chat-head">'+
+                '<ul id="controlbox-tabs"></ul></ul>'+
+                '<a class="close-chatbox-button close-controlbox-button">X</a>'+
+            '</div>'+
+            '<div id="controlbox-panes"></div>'
+        ),
+
+        switchTab: function (ev) {
+            ev.preventDefault();
+            var $tab = $(ev.target),
+                $sibling = $tab.parent().siblings('li').children('a'),
+                $tab_panel = $($tab.attr('href')),
+                $sibling_panel = $($sibling.attr('href'));
+
+            $sibling_panel.fadeOut('fast', function () { 
+                $sibling.removeClass('current');
+                $tab.addClass('current');
+                $tab_panel.fadeIn('fast', function () {
+                });
+            });
         },
 
         render: function () {
+            var that = this;
+            this.$el.hide('fast', function () {
+                $(this).html(that.template(that.model.toJSON()));
+            });
             return this;
         }
     });
@@ -680,7 +760,7 @@ require.config({
 
         template: _.template(
                 '<div class="chat-head chat-head-chatroom">' +
-                    '<a href="javascript:void(0)" class="chatbox-button close-chatbox-button">X</a>' +
+                    '<a class="close-chatbox-button">X</a>' +
                     '<div class="chat-title"> {{ name }} </div>' +
                     '<p class="chatroom-topic"><p/>' +
                 '</div>' +
@@ -819,7 +899,8 @@ require.config({
                 that = this;
 
             if (_.indexOf(open_chats, 'controlbox') != -1) {
-                this.createChatBox('controlbox');
+                // Controlbox already exists, we just need to show it.
+                this.showChat('controlbox');
             }
             _.each(open_chats, $.proxy(function (jid) {
                 if (jid != 'controlbox') {
@@ -838,29 +919,22 @@ require.config({
         
         createChatBox: function (jid, data) {
             var box, view;
-            if (jid === 'controlbox') {
-                box = new xmppchat.ControlBox({'id': jid, 'jid': jid});
-                view = new xmppchat.ControlBoxView({
-                    model: box 
+            if (this.isChatRoom(jid)) {
+                box = new xmppchat.ChatRoom(jid, xmppchat.fullname.split(' ')[0]);
+                view = new xmppchat.ChatRoomView({
+                    'model': box
                 });
             } else {
-                if (this.isChatRoom(jid)) {
-                    box = new xmppchat.ChatRoom(jid, xmppchat.fullname.split(' ')[0]);
-                    view = new xmppchat.ChatRoomView({
-                        'model': box
-                    });
-                } else {
-                    box = new xmppchat.ChatBox({
-                                            'id': jid, 
-                                            'jid': jid, 
-                                            'fullname': data.fullname, 
-                                            'portrait_url': data.portrait_url,
-                                            'user_profile_url': data.user_profile_url
-                                        });
-                    view = new xmppchat.ChatBoxView({
-                        model: box 
-                    });
-                }
+                box = new xmppchat.ChatBox({
+                                        'id': jid, 
+                                        'jid': jid, 
+                                        'fullname': data.fullname, 
+                                        'portrait_url': data.portrait_url,
+                                        'user_profile_url': data.user_profile_url
+                                    });
+                view = new xmppchat.ChatBoxView({
+                    model: box 
+                });
             }
             this.views[jid] = view.render();
             view.$el.appendTo(this.$el);
@@ -876,6 +950,7 @@ require.config({
         },
 
         openChat: function (jid) {
+            jid = Strophe.getBareJidFromJid(jid);
             if (!this.model.get(jid)) {
                 $.getJSON(portal_url + "/xmpp-userinfo?user_id=" + Strophe.getNodeFromJid(jid), $.proxy(function (data) {
                     view = this.createChatBox(jid, data);
@@ -923,10 +998,25 @@ require.config({
 
         initialize: function () {
             this.options.model.on("add", function (item) {
-                this.showChat(item.get('id'));
+                // The controlbox added automatically, but we don't show it
+                // automatically (only when it was open before page load or
+                // upon a click).
+                if (item.get('id') != 'controlbox') {
+                    this.showChat(item.get('id'));
+                }
             }, this);
-
             this.views = {};
+            // Add the controlbox view and the panels
+            this.views.controlbox = xmppchat.controlbox;
+            this.views.controlbox.$el.appendTo(this.$el);
+            this.views.controlbox.contactspanel = new xmppchat.ContactsPanel().render();
+            // TODO: Only add the rooms panel if the server supports MUC
+            this.views.controlbox.roomspanel = new xmppchat.RoomsPanel().render();
+            // Rebind events (necessary for click events on tabs inserted via the panels)
+            this.views.controlbox.delegateEvents();
+            // Add the controlbox model to this collection (will trigger showChat)
+            this.options.model.add(xmppchat.controlbox.options.model);
+
             this.restoreOpenChats();
         }
     });
@@ -939,8 +1029,7 @@ require.config({
             if (!name) {
                 name = user_id;
             }
-            this.set({
-                'id': jid,
+            this.set({ 'id': jid,
                 'jid': jid,
                 'ask': ask,
                 'bare_jid': Strophe.getBareJidFromJid(jid),
@@ -1080,22 +1169,22 @@ require.config({
                 rank = 4;
             switch(presence_type) {
                 case 'offline': 
-                    rank = 4;
+                    rank = 0;
                     break;
                 case 'unavailable':
-                    rank = 3;
+                    rank = 1;
                     break;
                 case 'away':
                     rank = 2;
                     break;
                 case 'busy':
-                    rank = 1;
+                    rank = 3;
                     break;
                 case 'dnd':
-                    rank = 1;
+                    rank = 4;
                     break;
                 case 'online':
-                    rank = 0;
+                    rank = 5;
                     break;
             }
             return rank;
@@ -1117,10 +1206,6 @@ require.config({
 
         isSelf: function (jid) {
             return (Strophe.getBareJidFromJid(jid) === Strophe.getBareJidFromJid(xmppchat.connection.jid));
-        },
-
-        getRoster: function () {
-            return xmppchat.connection.roster.get($.proxy(this.rosterHandler, this));
         },
 
         getItem: function (id) {
@@ -1297,7 +1382,6 @@ require.config({
             }
             return true;
         },
-
     });
 
     xmppchat.RosterView= (function (roster, _, $, console) {
@@ -1535,64 +1619,63 @@ require.config({
         this.username = chatdata.attr('username');
         this.fullname = chatdata.attr('fullname');
         this.auto_subscribe = chatdata.attr('auto_subscribe') === "True" || false;
-        this.portal_url = chatdata.attr('portal_url');
 
-        $(document).unbind('jarnxmpp.connected');
-        $(document).bind('jarnxmpp.connected', $.proxy(function () {
-            // this.connection.xmlInput = function (body) { console.log(body); };
-            // this.connection.xmlOutput = function (body) { console.log(body); };
+        this.controlbox = new xmppchat.ControlBoxView({
+            model: new xmppchat.ControlBox({'id':'controlbox', 'jid':'controlbox'})
+        }).render();
 
+        $(document).bind('xmpp.disconnected', $.proxy(function (ev, conn) {
+            console.log("Connection Failed :(");
+        }, this));
+
+        $(document).unbind('xmpp.connected');
+        $(document).bind('xmpp.connected', $.proxy(function (ev, connection) {
+            this.connection = connection
+            this.connection.xmlInput = function (body) { console.log(body); };
+            this.connection.xmlOutput = function (body) { console.log(body); };
             this.connection.bare_jid = Strophe.getBareJidFromJid(this.connection.jid);
             this.connection.domain = Strophe.getDomainFromJid(this.connection.jid);
-            // XXX: Better if configurable?
             this.connection.muc_domain = 'conference.' +  this.connection.domain;
-
-            this.storage = new this.ClientStorage({'own_jid': Strophe.getBareJidFromJid(this.connection.jid)});
-
-            this.roster = new this.RosterItems();
-            this.rosterview = Backbone.View.extend(this.RosterView(this.roster, _, $, console));
-            this.connection.addHandler(
-                    $.proxy(this.roster.subscribeToSuggestedItems, this.roster), 
-                    'http://jabber.org/protocol/rosterx', 'message', null);
-
-            this.connection.addHandler(
-                    $.proxy(function (presence) {
-                        this.presenceHandler(presence);
-                        return true;
-                    }, this.roster), null, 'presence', null);
-
-            this.connection.roster.registerCallback(
-                    $.proxy(this.roster.rosterHandler, this.roster), 
-                    null, 'presence', null);
-            
-            this.roster.getRoster();
+            this.storage = new this.ClientStorage({'own_jid': this.connection.bare_jid});
 
             this.chatboxes = new this.ChatBoxes();
             this.chatboxesview = new this.ChatBoxesView({
                 'model': this.chatboxes
             });
+            this.roster = new this.RosterItems();
+            this.rosterview = Backbone.View.extend(this.RosterView(this.roster, _, $, console));
 
             this.connection.addHandler(
-                    $.proxy(function (message) { 
-                        this.chatboxesview.messageReceived(message);
-                        return true;
-                    }, this), null, 'message', 'chat');
+                    $.proxy(this.roster.subscribeToSuggestedItems, this.roster), 
+                    'http://jabber.org/protocol/rosterx', 'message', null);
 
-            // XMPP Status 
-            this.xmppstatus = new this.XMPPStatus();
-            this.xmppstatusview = new this.XMPPStatusView({
-                'model': this.xmppstatus
-            });
+            this.connection.roster.registerCallback(
+                    $.proxy(this.roster.rosterHandler, this.roster), 
+                    null, 'presence', null);
 
-            // Controlbox toggler
-            $toggle.bind('click', $.proxy(function (e) {
-                e.preventDefault();
-                if ($("div#controlbox").is(':visible')) {
-                    this.chatboxesview.closeChat('controlbox');
-                } else {
-                    this.chatboxesview.openChat('controlbox');
-                }
-            }, this));
+            this.connection.roster.get($.proxy(function () {
+                    this.connection.addHandler(
+                            $.proxy(function (presence) {
+                                this.presenceHandler(presence);
+                                return true;
+                            }, this.roster), null, 'presence', null);
+
+                    this.connection.addHandler(
+                            $.proxy(function (message) { 
+                                this.chatboxesview.messageReceived(message);
+                                return true;
+                            }, this), null, 'message', 'chat');
+
+                    // XMPP Status 
+                    this.xmppstatus = new this.XMPPStatus();
+                    this.xmppstatusview = new this.XMPPStatusView({
+                        'model': this.xmppstatus
+                    });
+                }, this));
+
+            this.chatboxesview.showChat('controlbox');
+            // this.chatboxesview.openChat('controlbox');
+
         }, this));
     }, xmppchat));
 }));
